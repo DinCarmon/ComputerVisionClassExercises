@@ -47,7 +47,7 @@ def main():
     inliers_percent = 0.8
     # loading data with perfect matches
     src_img, dst_img, match_p_src, match_p_dst = load_data()
-    # Compute naive homography
+    """# Compute naive homography
     tt = time.time()
     naive_homography = solution.compute_homography_naive(match_p_src,
                                                          match_p_dst)
@@ -78,7 +78,7 @@ def main():
     plt.figure()
     forward_panorama_fast_plot = plt.imshow(transformed_image_fast)
     plt.title('Forward Homography Fast implementation')
-    # plt.show()
+    # plt.show()"""
 
     # loading data with imperfect matches
     src_img, dst_img, match_p_src, match_p_dst = load_data(False)
@@ -114,7 +114,7 @@ def main():
     print('Naive Homography Test {:5.4f} sec'.format(toc(tt)))
     print([fit_percent, dist_mse])
 
-    # Compute RANSAC homography
+    """# Compute RANSAC homography
     tt = tic()
     ransac_homography = solution.compute_homography(match_p_src,
                                                     match_p_dst,
@@ -147,7 +147,7 @@ def main():
     course_panorama_plot = plt.imshow(img_pan)
     plt.title('Great Panorama')
     # plt.show()
-    plt.show()
+    plt.show()"""
 
 
 def your_images_loader():
@@ -234,4 +234,4 @@ def your_images_main():
 
 if __name__ == '__main__':
     main()
-    your_images_main()
+    """your_images_main()"""

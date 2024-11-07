@@ -176,29 +176,19 @@ class Solution:
         xx, yy = np.meshgrid(range(src_image.shape[1]), range(src_image.shape[0]))
         xx = xx.reshape((xx.shape[0] * xx.shape[1]))
         yy = yy.reshape((yy.shape[0] * yy.shape[1]))
-        print(xx)
-        print(xx.shape[0])
         ones = np.ones(xx.shape[0])
-        print(ones)
         all_coords = np.stack((xx, yy, ones))
-        print(all_coords.shape)
         projected_coords = homography @ all_coords
         projected_coords = np.round(projected_coords / projected_coords[2])[:2,:]
-        print(projected_coords.shape)
 
-        # each column is the projected coords and the original ones after them
+        # each column is the projected coords and the original ones after them. Dimensions: [4, num_of_projected_pixels]
         projected_coords_and_original_coords = np.append(projected_coords, all_coords[:2, :], axis=0).astype(int)
-        print(projected_coords_and_original_coords.shape)
 
         # filter points which are outside the boundary
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] > 0]
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] > 0]
-        print(projected_coords_and_original_coords.shape)
-
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] < dst_image_shape[1]]
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] < dst_image_shape[0]]
-
-        print(projected_coords_and_original_coords.shape)
 
         # Copy the data from src to dst
         projected_image[projected_coords_and_original_coords[1, :],\
@@ -207,6 +197,25 @@ class Solution:
                         projected_coords_and_original_coords[2, :], :]
 
         return projected_image
+
+
+    @staticmethod
+    def calculate_distance(cord1, cord2) -> float:
+        """Calculate the pixel distance between cord1 and cord2
+
+        Args:
+            cord1: array of size 2 representing a pixel
+            cord2: array of size 2 representing a pixel
+
+        Returns:
+            A float representing the distance between the points
+        """
+        if cord1.shape[0] != 2 or cord2.shape[0] != 2:
+            raise TypeError("cords are 2D")
+
+        square_dist = (cord1[0] - cord2[0]) ** 2 + \
+                      (cord1[1] - cord2[1]) ** 2
+        return square_dist ** 0.5
 
 
     @staticmethod
@@ -234,9 +243,33 @@ class Solution:
             inliers). In edge case where the number of inliers is zero,
             return dist_mse = 10 ** 9.
         """
-        # return fit_percent, dist_mse
-        """INSERT YOUR CODE HERE"""
-        pass
+        if homography.shape != (3, 3):
+            raise TypeError("Homographic transform should be of size 3x3")
+        if match_p_src.shape[0] != 2:
+            raise TypeError("src points matrix should be of diensions 2xN")
+        if match_p_src.shape != match_p_dst.shape:
+            raise TypeError("Mismatch in size of matrices")
+
+        num_of_pairs = match_p_src.shape[1]
+        match_p_src_vector = np.stack((match_p_src[0], match_p_src[1], np.ones(num_of_pairs)))
+        projected_coords_vector = homography @ match_p_src_vector
+        projected_coords_vector_normalized = projected_coords_vector / projected_coords_vector[2]
+        projected_coords = projected_coords_vector_normalized[:2]
+        num_of_inliers = 0
+        sum_of_inliers_square_error = 0
+        for i in range(num_of_pairs):
+            pixel_distance = Solution.calculate_distance(match_p_dst[:, i], projected_coords[:, i])
+            # if it is an inlier
+            if pixel_distance <= max_err:
+                num_of_inliers += 1
+                sum_of_inliers_square_error += pixel_distance ** 2
+
+        if num_of_inliers == 0:
+            return 0, 10 ** 9
+
+        return num_of_inliers / num_of_pairs, \
+                sum_of_inliers_square_error / num_of_inliers
+
 
     @staticmethod
     def meet_the_model_points(homography: np.ndarray,
