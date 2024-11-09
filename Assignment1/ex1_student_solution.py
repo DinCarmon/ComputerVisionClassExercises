@@ -296,9 +296,39 @@ class Solution:
             The second entry is the matching points form the destination
             image (shape 2xD; D as above).
         """
-        # return mp_src_meets_model, mp_dst_meets_model
-        """INSERT YOUR CODE HERE"""
-        pass
+        if homography.shape != (3, 3):
+            raise TypeError("Homographic transform should be of size 3x3")
+        if match_p_src.shape[0] != 2:
+            raise TypeError("src points matrix should be of diensions 2xN")
+        if match_p_src.shape != match_p_dst.shape:
+            raise TypeError("Mismatch in size of matrices")
+
+        num_of_pairs = match_p_src.shape[1]
+        match_p_src_vector = np.stack((match_p_src[0], match_p_src[1], np.ones(num_of_pairs)))
+        projected_coords_vector = homography @ match_p_src_vector
+        projected_coords_vector_normalized = projected_coords_vector / projected_coords_vector[2]
+        projected_coords = projected_coords_vector_normalized[:2]
+
+        mp_src_meets_model = []
+        mp_dst_meets_model = []
+
+        num_of_inliers = 0
+        for i in range(num_of_pairs):
+            pixel_distance = Solution.calculate_distance(match_p_dst[:, i], projected_coords[:, i])
+            # if it is an inlier
+            if pixel_distance <= max_err:
+                num_of_inliers += 1
+                mp_src_meets_model.append(match_p_src[:, i])
+                mp_dst_meets_model.append(match_p_dst[:, i])
+
+        if num_of_inliers > 0:
+            mp_src_meets_model = np.array(mp_src_meets_model).T
+            mp_dst_meets_model = np.array(mp_dst_meets_model).T
+        else:
+            mp_src_meets_model = np.empty(shape=(2, 0))
+            mp_dst_meets_model = np.empty(shape=(2, 0))
+
+        return mp_src_meets_model, mp_dst_meets_model
 
     def compute_homography(self,
                            match_p_src: np.ndarray,
@@ -318,21 +348,46 @@ class Solution:
         Returns:
             homography: Projective transformation matrix from src to dst.
         """
-        # # use class notations:
-        # w = inliers_percent
-        # # t = max_err
-        # # p = parameter determining the probability of the algorithm to
-        # # succeed
-        # p = 0.99
-        # # the minimal probability of points which meets with the model
-        # d = 0.5
-        # # number of points sufficient to compute the model
-        # n = 4
-        # # number of RANSAC iterations (+1 to avoid the case where w=1)
-        # k = int(np.ceil(np.log(1 - p) / np.log(1 - w ** n))) + 1
-        # return homography
-        """INSERT YOUR CODE HERE"""
-        pass
+        # use class notations:
+        w = inliers_percent
+        t = max_err
+        # p = parameter determining the probability of the algorithm to
+        # succeed
+        p = 0.99
+        # the minimal probability of points which meets with the model
+        d = 0.5
+        # number of points sufficient to compute the model
+        n = 4
+        # number of RANSAC iterations (+1 to avoid the case where w=1)
+        k = int(np.ceil(np.log(1 - p) / np.log(1 - w ** n))) + 1
+
+        if match_p_src.shape[0] != 2:
+            raise TypeError("src points matrix should be of diensions 2xN")
+        if match_p_src.shape != match_p_dst.shape:
+            raise TypeError("Mismatch in size of matrices")
+
+        homography = np.zeros((3, 3))
+        best_mse = np.inf
+        num_of_pairs = match_p_src.shape[1]
+
+        for iteration in range(k):
+            points_sample = sample(range(num_of_pairs), 4)
+            match_p_src_sample = match_p_src[:, points_sample]
+            match_p_dst_sample = match_p_dst[:, points_sample]
+            initial_homography = self.compute_homography_naive(match_p_src_sample, match_p_dst_sample)
+            fit_percent, _ = self.test_homography(initial_homography, match_p_src, match_p_dst, max_err)
+
+            # update model if # inliers > d
+            if fit_percent > d:
+                mp_src_meets_model, mp_dst_meets_model = self.meet_the_model_points(initial_homography, match_p_src, match_p_dst, max_err)
+                improved_homography = self.compute_homography_naive(mp_src_meets_model, mp_dst_meets_model)
+                # TODO: test homography with only meets_model points?
+                fit_percent, dist_mse = self.test_homography(improved_homography, match_p_src, match_p_dst, max_err)
+                if dist_mse < best_mse:
+                    best_mse = dist_mse
+                    homography = improved_homography
+
+        return homography
 
     @staticmethod
     def compute_backward_mapping(
