@@ -555,9 +555,16 @@ class Solution:
             A new homography which includes the backward homography and the
             translation.
         """
-        # return final_homography
-        """INSERT YOUR CODE HERE"""
-        pass
+        translation_matrix = np.array([
+            [1, 0, -pad_left],
+            [0, 1, -pad_up],
+            [0, 0, 1]
+        ])
+
+        final_homography = backward_homography @ translation_matrix
+        final_homography = final_homography / np.linalg.norm(final_homography)
+
+        return final_homography
 
     def panorama(self,
                  src_image: np.ndarray,
