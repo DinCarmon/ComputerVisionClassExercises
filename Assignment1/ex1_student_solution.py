@@ -415,9 +415,57 @@ class Solution:
             The source image backward warped to the destination coordinates.
         """
 
-        # return backward_warp
-        """INSERT YOUR CODE HERE"""
-        pass
+        if backward_projective_homography.shape != (3, 3):
+            raise TypeError("Homographic transform should be of size 3x3")
+        if src_image.shape[2] != dst_image_shape[2]:
+            raise TypeError("mismatch in number of colors")
+
+        projected_image = np.zeros(shape=dst_image_shape, dtype=np.uint8)
+
+        # xx is of pattern: 0,0,0,...0    ,1,1,...,1  ,2,...
+        # yy is of pattern: 0,1,2,...100  ,0,1,...,100,0,...
+        xx, yy = np.meshgrid(range(dst_image_shape[1]), range(dst_image_shape[0]))
+        xx = xx.reshape((xx.shape[0] * xx.shape[1]))
+        yy = yy.reshape((yy.shape[0] * yy.shape[1]))
+        ones = np.ones(xx.shape[0])
+        all_coords = np.stack((xx, yy, ones))
+        src_projected_coords = backward_projective_homography @ all_coords
+        src_projected_coords = (src_projected_coords / src_projected_coords[2])[:2,:]
+
+        # each column is the projected coords and the original ones after them. Dimensions: [4, num_of_projected_pixels]
+        projected_coords_and_original_coords = np.append(src_projected_coords, all_coords[:2, :], axis=0)
+
+        # filter points which are outside the boundary
+        projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] > 0]
+        projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] > 0]
+        projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] < src_image.shape[1]]
+        projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] < src_image.shape[0]]
+
+        # src_indexes = np.floor(projected_coords_and_original_coords[0:2, :]).astype(int)
+        # src_values = src_image[src_indexes[1, :], src_indexes[0, :], :]
+        #
+        # backward_warp = griddata(projected_coords_and_original_coords[2:, :].transpose(),
+        #                          src_values, (projected_image_xx, projected_image_yy), method='cubic')
+        # return np.round(backward_warp).astype(int)
+
+        # TODO verify use of griddata
+        src_x, src_y = projected_coords_and_original_coords[0], projected_coords_and_original_coords[1]
+        dst_x, dst_y = projected_coords_and_original_coords[2], projected_coords_and_original_coords[3]
+
+        for channel in range(3):  # RGB channels
+            values = src_image[src_y.astype(int), src_x.astype(int), channel]
+
+            interpolated_values = griddata(
+                points=np.stack((src_x.astype(int), src_y.astype(int)), axis=-1),
+                values=values,
+                xi=np.stack((src_x, src_y), axis=-1),
+                method='cubic',
+                fill_value=0
+            )
+
+            projected_image[dst_y.astype(int), dst_x.astype(int), channel] = interpolated_values
+
+        return projected_image
 
     @staticmethod
     def find_panorama_shape(src_image: np.ndarray,
