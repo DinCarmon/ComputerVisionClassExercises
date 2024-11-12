@@ -131,7 +131,7 @@ def main():
                                                      max_err)
     print('RANSAC Homography Test {:5.4f} sec'.format(toc(tt)))
     print([fit_percent, dist_mse])
-    """
+
     # Build panorama
     tt = tic()
     img_pan = solution.panorama(src_img,
@@ -147,7 +147,7 @@ def main():
     course_panorama_plot = plt.imshow(img_pan)
     plt.title('Great Panorama')
     # plt.show()
-    plt.show()"""
+    plt.show()
 
 
 def your_images_loader():
@@ -194,7 +194,7 @@ def your_images_main():
     import numpy as np
     student_forward_warp_img = plt.imshow(img.astype(np.uint8))
     plt.title('Forward warp example')
-    # plt.show()
+    plt.show()
 
     backward_homography = solution.compute_homography(match_p_dst, match_p_src,
                                                       inliers_percent,
@@ -207,7 +207,7 @@ def your_images_main():
     import numpy as np
     student_backward_warp_img = plt.imshow(img.astype(np.uint8))
     plt.title('Backward warp example')
-    # plt.show()
+    plt.show()
 
     # Build student panorama
     tt = tic()
@@ -234,4 +234,4 @@ def your_images_main():
 
 if __name__ == '__main__':
     main()
-    """your_images_main()"""
+    #your_images_main()
