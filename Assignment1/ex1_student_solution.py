@@ -441,6 +441,7 @@ class Solution:
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] < src_image.shape[1]]
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] < src_image.shape[0]]
 
+        # projected_image_xx, projected_image_yy = np.meshgrid(range(dst_image_shape[1]), range(dst_image_shape[0]))
         # src_indexes = np.floor(projected_coords_and_original_coords[0:2, :]).astype(int)
         # src_values = src_image[src_indexes[1, :], src_indexes[0, :], :]
         #
@@ -456,7 +457,7 @@ class Solution:
             values = src_image[src_y.astype(int), src_x.astype(int), channel]
 
             interpolated_values = griddata(
-                points=np.stack((src_x.astype(int), src_y.astype(int)), axis=-1),
+                points=np.stack((src_x, src_y), axis=-1),
                 values=values,
                 xi=np.stack((src_x, src_y), axis=-1),
                 method='cubic',
