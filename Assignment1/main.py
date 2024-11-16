@@ -65,7 +65,7 @@ def main():
     plt.figure()
     forward_panorama_slow_plot = plt.imshow(transformed_image)
     plt.title('Forward Homography Slow implementation')
-    plt.show()
+    # plt.show()
 
     # Plot naive homography with forward mapping, fast implementation
     tt = time.time()
@@ -78,7 +78,7 @@ def main():
     plt.figure()
     forward_panorama_fast_plot = plt.imshow(transformed_image_fast)
     plt.title('Forward Homography Fast implementation')
-    plt.show()
+    # plt.show()
 
     # loading data with imperfect matches
     src_img, dst_img, match_p_src, match_p_dst = load_data(False)
@@ -103,7 +103,7 @@ def main():
     plt.figure()
     forward_panorama_imperfect_matches_plot = plt.imshow(transformed_image_fast)
     plt.title('Forward Panorama imperfect matches')
-    plt.show()
+    # plt.show()
 
     # Test naive homography
     tt = time.time()
@@ -194,7 +194,7 @@ def your_images_main():
     import numpy as np
     student_forward_warp_img = plt.imshow(img.astype(np.uint8))
     plt.title('Forward warp example')
-    plt.show()
+    # plt.show()
 
     backward_homography = solution.compute_homography(match_p_dst, match_p_src,
                                                       inliers_percent,
@@ -207,7 +207,7 @@ def your_images_main():
     import numpy as np
     student_backward_warp_img = plt.imshow(img.astype(np.uint8))
     plt.title('Backward warp example')
-    plt.show()
+    # plt.show()
 
     # Build student panorama
     tt = tic()
@@ -234,4 +234,4 @@ def your_images_main():
 
 if __name__ == '__main__':
     main()
-    #your_images_main()
+    your_images_main()

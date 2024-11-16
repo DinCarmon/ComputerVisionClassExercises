@@ -444,42 +444,23 @@ class Solution:
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[0] < src_image.shape[1]]
         projected_coords_and_original_coords = projected_coords_and_original_coords[:, projected_coords_and_original_coords[1] < src_image.shape[0]]
 
-        # projected_image_xx, projected_image_yy = np.meshgrid(range(dst_image_shape[1]), range(dst_image_shape[0]))
-        # src_indexes = np.floor(projected_coords_and_original_coords[0:2, :]).astype(int)
-        # src_values = src_image[src_indexes[1, :], src_indexes[0, :], :]
-        #
-        # backward_warp = griddata(projected_coords_and_original_coords[2:, :].transpose(),
-        #                          src_values, (projected_image_xx, projected_image_yy), method='cubic')
-        # return np.round(backward_warp).astype(int)
-
-        # TODO verify use of griddata
+        # mesh-grid of source image coordinates
         src_x, src_y = projected_coords_and_original_coords[0], projected_coords_and_original_coords[1]
         dst_x, dst_y = projected_coords_and_original_coords[2], projected_coords_and_original_coords[3]
 
-        for channel in range(3):  # RGB channels
-            meshgrid_x_coords, meshgrid_y_cords = np.meshgrid(range(src_image.shape[1]), range(src_image.shape[0]))
+        meshgrid_x_cords, meshgrid_y_cords = np.meshgrid(range(src_image.shape[1]), range(src_image.shape[0]))
+        meshgrid_x_cords = meshgrid_x_cords.reshape((meshgrid_x_cords.shape[0] * meshgrid_x_cords.shape[1]))
+        meshgrid_y_cords = meshgrid_y_cords.reshape((meshgrid_y_cords.shape[0] * meshgrid_y_cords.shape[1]))
 
+        for channel in range(3):
             interpolated_values = griddata(
-                points=np.stack((meshgrid_x_coords, meshgrid_y_cords), axis=-1),
-                values=src_image[meshgrid_x_coords, meshgrid_y_cords, channel],
+                points=np.stack((meshgrid_x_cords, meshgrid_y_cords), axis=-1),
+                values=src_image[meshgrid_y_cords, meshgrid_x_cords, channel],
                 xi=np.stack((src_x, src_y), axis=-1),
-                method='cubic',
+                method='linear',
                 fill_value=0
             )
-
-
-            # TODO: It does not make since. src_y, src_x are not integers even.
-            #values = src_image[src_y.astype(int), src_x.astype(int), channel]
-
-            #interpolated_values = griddata(
-            #    points=np.stack((src_x, src_y), axis=-1),
-            #    values=values,
-            #    xi=np.stack((src_x, src_y), axis=-1),
-            #    method='cubic',
-            #    fill_value=0
-            #)
-
-            projected_image[dst_y.astype(int), dst_x.astype(int), channel] = interpolated_values
+            projected_image[dst_y.astype(int), dst_x.astype(int), channel] = np.round(interpolated_values).astype(int)
 
         return projected_image
 
