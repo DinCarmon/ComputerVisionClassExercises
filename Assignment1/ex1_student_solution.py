@@ -76,7 +76,9 @@ class Solution:
         H[2, 1] = minimal_eigenvalue_eigenvector[7]
         H[2, 2] = minimal_eigenvalue_eigenvector[8]
 
-        # Intend for h22 to be 1. This is a common arbitrary default.
+        # Intend for h22 to be 1. This is a common arbitrary default, in some places. However,
+        # a better rule of the thumb is to keep the norm of H to 1. Therefore, the following line is
+        # commented out.
         # H = H / minimal_eigenvalue_eigenvector[8]
 
         return H
@@ -276,7 +278,7 @@ class Solution:
                               match_p_src: np.ndarray,
                               match_p_dst: np.ndarray,
                               max_err: float) -> Tuple[np.ndarray, np.ndarray]:
-        """Return which matching points meet the homography.
+        """Return which matching points that meet the homography.
 
         Loop through the matching points, and return the matching points from
         both images that are inliers for the given homography.
@@ -299,7 +301,7 @@ class Solution:
         if homography.shape != (3, 3):
             raise TypeError("Homographic transform should be of size 3x3")
         if match_p_src.shape[0] != 2:
-            raise TypeError("src points matrix should be of diensions 2xN")
+            raise TypeError("src points matrix should be of dimensions 2xN")
         if match_p_src.shape != match_p_dst.shape:
             raise TypeError("Mismatch in size of matrices")
 
@@ -355,14 +357,17 @@ class Solution:
         # succeed
         p = 0.99
         # the minimal probability of points which meets with the model
+        # TODO: Why 0.5?
         d = 0.5
         # number of points sufficient to compute the model
         n = 4
         # number of RANSAC iterations (+1 to avoid the case where w=1)
+        # TODO: Not sure about the division of logs. Isnt it the log of the division?
+        # TODO: If we worry about the case of w=1 than perhaps we can just do if w = 1, then k = 1.
         k = int(np.ceil(np.log(1 - p) / np.log(1 - w ** n))) + 1
 
         if match_p_src.shape[0] != 2:
-            raise TypeError("src points matrix should be of diensions 2xN")
+            raise TypeError("src points matrix should be of dimensions 2xN")
         if match_p_src.shape != match_p_dst.shape:
             raise TypeError("Mismatch in size of matrices")
 
@@ -381,12 +386,13 @@ class Solution:
             if fit_percent > d:
                 mp_src_meets_model, mp_dst_meets_model = self.meet_the_model_points(initial_homography, match_p_src, match_p_dst, max_err)
                 improved_homography = self.compute_homography_naive(mp_src_meets_model, mp_dst_meets_model)
-                # TODO: test homography with only meets_model points?
+                # TODO: test homography with only meets_model points? - yes!
                 fit_percent, dist_mse = self.test_homography(improved_homography, match_p_src, match_p_dst, max_err)
                 if dist_mse < best_mse:
                     best_mse = dist_mse
                     homography = improved_homography
 
+        # TODO: Should do some raise error if the iteration falis and H is empty
         return homography
 
     @staticmethod
@@ -454,6 +460,7 @@ class Solution:
         dst_x, dst_y = projected_coords_and_original_coords[2], projected_coords_and_original_coords[3]
 
         for channel in range(3):  # RGB channels
+            # TODO: It does not make since. src_y, src_x are not integers even.
             values = src_image[src_y.astype(int), src_x.astype(int), channel]
 
             interpolated_values = griddata(
@@ -611,13 +618,17 @@ class Solution:
 
         panorama_rows_num, panorama_cols_num, pad_struct = self.find_panorama_shape(src_image, dst_image, forward_homography)
 
+        # Add a linear projection from the dst image space to the built panorama image space
         pad_left = pad_struct.pad_left
         pad_up = pad_struct.pad_up
         homography_with_translation = self.add_translation_to_backward_homography(backward_homography,
                                                                                   pad_left, pad_up)
+
+        # Compute final projection of the src image to the destination panorama space
         panorama_shape = (panorama_rows_num, panorama_cols_num, 3)
         img_panorama = self.compute_backward_mapping(homography_with_translation, src_image, panorama_shape)
 
+        # Add the pixels from the dst image to the panorama
         img_panorama[pad_up:(dst_image.shape[0] + pad_up), pad_left:(dst_image.shape[1] + pad_left), :] = dst_image[:, :, :]
 
         return np.clip(img_panorama, 0, 255).astype(np.uint8)
