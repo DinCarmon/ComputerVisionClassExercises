@@ -357,13 +357,10 @@ class Solution:
         # succeed
         p = 0.99
         # the minimal probability of points which meets with the model
-        # TODO: Why 0.5?
         d = 0.5
         # number of points sufficient to compute the model
         n = 4
         # number of RANSAC iterations (+1 to avoid the case where w=1)
-        # TODO: Not sure about the division of logs. Isnt it the log of the division?
-        # TODO: If we worry about the case of w=1 than perhaps we can just do if w = 1, then k = 1.
         k = int(np.ceil(np.log(1 - p) / np.log(1 - w ** n))) + 1
 
         if match_p_src.shape[0] != 2:
@@ -386,13 +383,13 @@ class Solution:
             if fit_percent > d:
                 mp_src_meets_model, mp_dst_meets_model = self.meet_the_model_points(initial_homography, match_p_src, match_p_dst, max_err)
                 improved_homography = self.compute_homography_naive(mp_src_meets_model, mp_dst_meets_model)
-                # TODO: test homography with only meets_model points? - yes!
                 fit_percent, dist_mse = self.test_homography(improved_homography, match_p_src, match_p_dst, max_err)
                 if dist_mse < best_mse:
                     best_mse = dist_mse
                     homography = improved_homography
 
-        # TODO: Should do some raise error if the iteration falis and H is empty
+        if best_mse == np.inf:
+            raise RuntimeError("RANSAC algorithm failed.")
         return homography
 
     @staticmethod
@@ -460,16 +457,27 @@ class Solution:
         dst_x, dst_y = projected_coords_and_original_coords[2], projected_coords_and_original_coords[3]
 
         for channel in range(3):  # RGB channels
-            # TODO: It does not make since. src_y, src_x are not integers even.
-            values = src_image[src_y.astype(int), src_x.astype(int), channel]
+            meshgrid_x_coords, meshgrid_y_cords = np.meshgrid(range(src_image.shape[1]), range(src_image.shape[0]))
 
             interpolated_values = griddata(
-                points=np.stack((src_x, src_y), axis=-1),
-                values=values,
+                points=np.stack((meshgrid_x_coords, meshgrid_y_cords), axis=-1),
+                values=src_image[meshgrid_x_coords, meshgrid_y_cords, channel],
                 xi=np.stack((src_x, src_y), axis=-1),
                 method='cubic',
                 fill_value=0
             )
+
+
+            # TODO: It does not make since. src_y, src_x are not integers even.
+            #values = src_image[src_y.astype(int), src_x.astype(int), channel]
+
+            #interpolated_values = griddata(
+            #    points=np.stack((src_x, src_y), axis=-1),
+            #    values=values,
+            #    xi=np.stack((src_x, src_y), axis=-1),
+            #    method='cubic',
+            #    fill_value=0
+            #)
 
             projected_image[dst_y.astype(int), dst_x.astype(int), channel] = interpolated_values
 
