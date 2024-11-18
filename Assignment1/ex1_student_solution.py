@@ -457,10 +457,11 @@ class Solution:
                 points=np.stack((meshgrid_x_cords, meshgrid_y_cords), axis=-1),
                 values=src_image[meshgrid_y_cords, meshgrid_x_cords, channel],
                 xi=np.stack((src_x, src_y), axis=-1),
-                method='linear',
+                method='cubic',
                 fill_value=0
             )
-            projected_image[dst_y.astype(int), dst_x.astype(int), channel] = np.round(interpolated_values).astype(int)
+            interpolated_values = np.clip(np.round(interpolated_values), 0, 255).astype(int)
+            projected_image[dst_y.astype(int), dst_x.astype(int), channel] = interpolated_values
 
         return projected_image
 
