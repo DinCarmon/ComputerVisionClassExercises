@@ -32,7 +32,30 @@ class Solution:
         ssdd_tensor = np.zeros((num_of_rows,
                                 num_of_cols,
                                 len(disparity_values)))
-        """INSERT YOUR CODE HERE"""
+
+        if win_size < 0 or win_size % 2 == 0:
+            raise TypeError('window size must be odd integer')
+
+        padding_size = int((win_size-1)/2)
+        if len(left_image.shape) > 2: # handle image 3d case
+            padded_left_image = np.pad(left_image, ((padding_size, padding_size), (padding_size, padding_size), (0, 0)))
+            padded_right_image = np.pad(right_image, ((padding_size, padding_size), (padding_size, padding_size), (0, 0)))
+        else: # handle image 2d case
+            padded_left_image = np.pad(left_image, ((padding_size, padding_size), (padding_size, padding_size)))
+            padded_right_image = np.pad(right_image, ((padding_size, padding_size), (padding_size, padding_size)))
+
+
+        for i in range(num_of_rows):
+            for j in range(num_of_cols):
+                left_window = padded_left_image[i:i+win_size, j:j+win_size]
+                for d_idx, d in enumerate(disparity_values):
+                    j_right = j+d
+                    if j_right >= 0 and j_right < num_of_cols:
+                        right_window = padded_right_image[i:i + win_size, j_right:j_right + win_size]
+                        ssdd_tensor[i, j, d_idx] = np.sum((left_window-right_window) ** 2)
+                    else:
+                        ssdd_tensor[i, j, d_idx] = np.sum(left_window ** 2)
+
         ssdd_tensor -= ssdd_tensor.min()
         ssdd_tensor /= ssdd_tensor.max()
         ssdd_tensor *= 255.0
@@ -54,9 +77,7 @@ class Solution:
         Returns:
             Naive labels HxW matrix.
         """
-        # you can erase the label_no_smooth initialization.
-        label_no_smooth = np.zeros((ssdd_tensor.shape[0], ssdd_tensor.shape[1]))
-        """INSERT YOUR CODE HERE"""
+        label_no_smooth = np.argmin(ssdd_tensor, axis=2)
         return label_no_smooth
 
     @staticmethod
