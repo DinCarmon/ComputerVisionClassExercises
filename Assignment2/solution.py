@@ -81,6 +81,11 @@ class Solution:
         return label_no_smooth
 
     @staticmethod
+    def min_excluding_rows(l_slice, p, exclude_list):
+        rows_to_check = np.setdiff1d(np.arange(l_slice.shape[0]), exclude_list)
+        return np.min(l_slice[rows_to_check, p])
+
+    @staticmethod
     def dp_grade_slice(c_slice: np.ndarray, p1: float, p2: float) -> np.ndarray:
         """Calculate the scores matrix for slice c_slice.
 
@@ -98,7 +103,24 @@ class Solution:
         """
         num_labels, num_of_cols = c_slice.shape[0], c_slice.shape[1]
         l_slice = np.zeros((num_labels, num_of_cols))
-        """INSERT YOUR CODE HERE"""
+
+        #init
+        for d in range(num_labels):
+            l_slice[d][0] = c_slice[d][0]
+
+        for d in range(num_labels):
+            for p in range(1,num_of_cols):
+                if d < num_labels-1:
+                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
+                                                         l_slice[d-1][p-1]+p1, l_slice[d+1][p-1]+p1,
+                                                         Solution.min_excluding_rows(l_slice, p, [d - 1, d, d + 1])+p2])
+                else:
+                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
+                                                         l_slice[d-1][p-1]+p1,
+                                                         Solution.min_excluding_rows(l_slice, p, [d - 1, d])+p2])
+                # normalize
+                l_slice[d][p] -= min(l_slice[:,p-1])
+
         return l_slice
 
     def dp_labeling(self,
@@ -123,7 +145,12 @@ class Solution:
             Dynamic Programming depth estimation matrix of shape HxW.
         """
         l = np.zeros_like(ssdd_tensor)
-        """INSERT YOUR CODE HERE"""
+
+        num_of_rows = ssdd_tensor.shape[0]
+        for i in range(num_of_rows):
+            c_slice = ssdd_tensor[i, :, :].transpose()
+            l[i, :, :] = self.dp_grade_slice(c_slice, p1, p2).transpose()
+
         return self.naive_labeling(l)
 
     def dp_labeling_per_direction(self,
