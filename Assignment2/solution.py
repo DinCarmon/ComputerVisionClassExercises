@@ -107,17 +107,24 @@ class Solution:
         #init
         for d in range(num_labels):
             l_slice[d][0] = c_slice[d][0]
+        l_slice[:, 0] -= np.min(l_slice[:, 0])
 
-        for d in range(num_labels):
-            for p in range(1,num_of_cols):
-                if d < num_labels-1:
+        for p in range(1, num_of_cols):
+            for d in range(num_labels):
+                if d == 0:
                     l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
-                                                         l_slice[d-1][p-1]+p1, l_slice[d+1][p-1]+p1,
-                                                         Solution.min_excluding_rows(l_slice, p, [d - 1, d, d + 1])+p2])
+                                                         l_slice[d+1][p-1]+p1,
+                                                         np.min(l_slice[2:, p - 1]) + p2])
+                elif d == num_labels-1:
+                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
+                                                         l_slice[d-1][p-1]+p1,
+                                                         np.min(l_slice[:-2, p - 1]) + p2])
                 else:
                     l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
                                                          l_slice[d-1][p-1]+p1,
-                                                         Solution.min_excluding_rows(l_slice, p, [d - 1, d])+p2])
+                                                         l_slice[d+1][p-1]+p1,
+                                                         np.min(l_slice[:d - 1, p - 1])+p2,
+                                                         np.min(l_slice[d + 2:, p - 1])+p2])
                 # normalize
                 l_slice[d][p] -= min(l_slice[:,p-1])
 
