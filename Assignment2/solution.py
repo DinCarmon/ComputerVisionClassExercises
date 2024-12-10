@@ -104,29 +104,29 @@ class Solution:
         num_labels, num_of_cols = c_slice.shape[0], c_slice.shape[1]
         l_slice = np.zeros((num_labels, num_of_cols))
 
-        #init
-        for d in range(num_labels):
-            l_slice[d][0] = c_slice[d][0]
+        # Initialize first column
+        l_slice[:, 0] = c_slice[:, 0]
         l_slice[:, 0] -= np.min(l_slice[:, 0])
 
+        # Use padding to handle edge cases
+        l_slice_padded = np.pad(l_slice, ((1, 1), (0, 0)), constant_values=np.inf)
+
         for p in range(1, num_of_cols):
-            for d in range(num_labels):
-                if d == 0:
-                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
-                                                         l_slice[d+1][p-1]+p1,
-                                                         np.min(l_slice[2:, p - 1]) + p2])
-                elif d == num_labels-1:
-                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
-                                                         l_slice[d-1][p-1]+p1,
-                                                         np.min(l_slice[:-2, p - 1]) + p2])
-                else:
-                    l_slice[d][p] = c_slice[d][p] + min([l_slice[d][p-1],
-                                                         l_slice[d-1][p-1]+p1,
-                                                         l_slice[d+1][p-1]+p1,
-                                                         np.min(l_slice[:d - 1, p - 1])+p2,
-                                                         np.min(l_slice[d + 2:, p - 1])+p2])
-                # normalize
-                l_slice[d][p] -= min(l_slice[:,p-1])
+            for d in range(1, num_labels + 1):
+                same_disp = l_slice_padded[d, p - 1]
+                lower_p1_disp = l_slice_padded[d - 1, p - 1] + p1
+                higher_p1_disp = l_slice_padded[d + 1, p - 1] + p1
+                lower_p2_disp = np.min(l_slice_padded[:d - 1, p - 1]) + p2 if d - 1 > 0 else np.inf
+                above_p2_disp = np.min(l_slice_padded[d + 2:, p - 1]) + p2 if d + 2 < num_labels + 2 else np.inf
+
+                # Update l_slice; c_slice is in d-1 since l_slice is padded
+                l_slice_padded[d, p] = c_slice[d - 1, p] + min(same_disp, lower_p1_disp, higher_p1_disp, lower_p2_disp, above_p2_disp)
+
+                # Normalize
+                l_slice_padded[d, p] -= min(l_slice_padded[:,p-1])
+
+        # Remove padding
+        l_slice = l_slice_padded[1:-1, :]
 
         return l_slice
 
