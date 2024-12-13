@@ -160,6 +160,60 @@ class Solution:
 
         return self.naive_labeling(l)
 
+    def dp_get_direction_slices(self,
+                    ssdd_tensor: np.ndarray,
+                    direction: int):
+
+        c_slices = []
+        if direction == 1: # loop over rows
+            num_of_rows, num_of_cols = ssdd_tensor.shape[0], ssdd_tensor.shape[1]
+            for i in range(num_of_rows):
+                c_slice = ssdd_tensor[i, :, :].transpose()
+                c_slices.append(c_slice)
+        elif direction == 2: # loop over diags
+            num_of_rows, num_of_cols = ssdd_tensor.shape[0], ssdd_tensor.shape[1]
+            for offset in range(-(num_of_rows - 1), num_of_cols):
+                c_slice = np.diagonal(ssdd_tensor, offset=offset)
+                c_slices.append(c_slice)
+        elif direction == 3: # transpose; loop over rows
+            ssdd_tensor_transformed = np.transpose(ssdd_tensor, axes=[1, 0, 2])
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for i in range(num_of_rows):
+                c_slice = ssdd_tensor_transformed[i, :, :].transpose()
+                c_slices.append(c_slice)
+        elif direction == 4: # flip cols; loop over diags
+            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=1)
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for offset in range(-(num_of_rows - 1), num_of_cols):
+                c_slice = np.diagonal(ssdd_tensor, offset=offset)
+                c_slices.append(c_slice)
+        elif direction == 5: # flip cols; transpose; loop over rows
+            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=1)
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for i in range(num_of_rows):
+                c_slice = ssdd_tensor[i, :, :].transpose()
+                c_slices.append(c_slice)
+        elif direction == 6: # flip cols and flip rows; loop over diags
+            ssdd_tensor_transformed = np.flip(np.flip(ssdd_tensor, axis=1), axis=0)
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for offset in range(-(num_of_rows - 1), num_of_cols):
+                c_slice = np.diagonal(ssdd_tensor, offset=offset)
+                c_slices.append(c_slice)
+        elif direction == 7: # transpose and flip rows; loop over rows
+            ssdd_tensor_transformed = np.flip(np.transpose(ssdd_tensor, axes=[1, 0, 2]), axis=0)
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for i in range(num_of_rows):
+                c_slice = ssdd_tensor_transformed[i, :, :].transpose()
+                c_slices.append(c_slice)
+        elif direction == 8: # flip rows; loop over diags
+            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=0)
+            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
+            for offset in range(-(num_of_rows - 1), num_of_cols):
+                c_slice = np.diagonal(ssdd_tensor, offset=offset)
+                c_slices.append(c_slice)
+
+        return c_slices
+
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
                                   p1: float,
