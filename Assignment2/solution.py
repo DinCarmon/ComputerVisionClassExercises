@@ -36,26 +36,34 @@ class Solution:
         if win_size < 0 or win_size % 2 == 0:
             raise TypeError('window size must be odd integer')
 
-        padding_size = int((win_size-1)/2)
+        padding_size_left = int((win_size-1) / 2)
+        # Another padding is needed for the horizontal dimension of the second image
+        # An example: given we want to calculate the ssd for pixel (0x0), with a windows size of 3,
+        # and a depth of -1. We may choose to define such a case with an ssd value of 0 because it is outside
+        # the column boundary of the second image. However, a better solution is to compare only the third column of
+        # the windows which is in the boundaries of the second image.
+        padding_size_right = int((win_size - 1))
         if len(left_image.shape) > 2: # handle image 3d case
-            padded_left_image = np.pad(left_image, ((padding_size, padding_size), (padding_size, padding_size), (0, 0)))
-            padded_right_image = np.pad(right_image, ((padding_size, padding_size), (padding_size, padding_size), (0, 0)))
+            padded_left_image = np.pad(left_image, ((padding_size_left, padding_size_left), (padding_size_left, padding_size_left), (0, 0)))
+            padded_right_image = np.pad(right_image, ((padding_size_left, padding_size_left), (padding_size_right, padding_size_right), (0, 0)))
         else: # handle image 2d case
-            padded_left_image = np.pad(left_image, ((padding_size, padding_size), (padding_size, padding_size)))
-            padded_right_image = np.pad(right_image, ((padding_size, padding_size), (padding_size, padding_size)))
+            padded_left_image = np.pad(left_image, ((padding_size_left, padding_size_left), (padding_size_left, padding_size_left)))
+            padded_right_image = np.pad(right_image, ((padding_size_left, padding_size_left), (padding_size_right, padding_size_right)))
 
 
         for i in range(num_of_rows):
             for j in range(num_of_cols):
                 left_window = padded_left_image[i:i+win_size, j:j+win_size]
                 for d_idx, d in enumerate(disparity_values):
-                    j_right = j+d
-                    if j_right >= 0 and j_right < num_of_cols:
+                    j_right = j+d+(padding_size_right-padding_size_left)
+                    if 0 <= j_right <= (num_of_cols + 2 * padding_size_right - win_size):
                         right_window = padded_right_image[i:i + win_size, j_right:j_right + win_size]
                         ssdd_tensor[i, j, d_idx] = np.sum((left_window-right_window) ** 2)
                     else:
                         ssdd_tensor[i, j, d_idx] = np.sum(left_window ** 2)
 
+        if ssdd_tensor.max() == ssdd_tensor.min():
+            raise ValueError('ssd tensor is all identical. Cannot normalize')
         ssdd_tensor -= ssdd_tensor.min()
         ssdd_tensor /= ssdd_tensor.max()
         ssdd_tensor *= 255.0
@@ -80,6 +88,7 @@ class Solution:
         label_no_smooth = np.argmin(ssdd_tensor, axis=2)
         return label_no_smooth
 
+    # Do we need that function?
     @staticmethod
     def min_excluding_rows(l_slice, p, exclude_list):
         rows_to_check = np.setdiff1d(np.arange(l_slice.shape[0]), exclude_list)
@@ -106,16 +115,15 @@ class Solution:
 
         # Initialize first column
         l_slice[:, 0] = c_slice[:, 0]
-        l_slice[:, 0] -= np.min(l_slice[:, 0])
 
         # Use padding to handle edge cases
         l_slice_padded = np.pad(l_slice, ((1, 1), (0, 0)), constant_values=np.inf)
 
         for p in range(1, num_of_cols):
             for d in range(1, num_labels + 1):
-                same_disp = l_slice_padded[d, p - 1]
-                lower_p1_disp = l_slice_padded[d - 1, p - 1] + p1
-                higher_p1_disp = l_slice_padded[d + 1, p - 1] + p1
+                same_disp = float(l_slice_padded[d, p - 1])
+                lower_p1_disp = float(l_slice_padded[d - 1, p - 1] + p1)
+                higher_p1_disp = float(l_slice_padded[d + 1, p - 1] + p1)
                 lower_p2_disp = np.min(l_slice_padded[:d - 1, p - 1]) + p2 if d - 1 > 0 else np.inf
                 above_p2_disp = np.min(l_slice_padded[d + 2:, p - 1]) + p2 if d + 2 < num_labels + 2 else np.inf
 
@@ -170,49 +178,58 @@ class Solution:
             for i in range(num_of_rows):
                 c_slice = ssdd_tensor[i, :, :].transpose()
                 c_slices.append(c_slice)
+            return c_slices
         elif direction == 2: # loop over diags
             num_of_rows, num_of_cols = ssdd_tensor.shape[0], ssdd_tensor.shape[1]
-            for offset in range(-(num_of_rows - 1), num_of_cols):
+            for offset in range(num_of_cols - 1, -num_of_rows, -1):
                 c_slice = np.diagonal(ssdd_tensor, offset=offset)
                 c_slices.append(c_slice)
+            return c_slices
         elif direction == 3: # transpose; loop over rows
-            ssdd_tensor_transformed = np.transpose(ssdd_tensor, axes=[1, 0, 2])
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for i in range(num_of_rows):
-                c_slice = ssdd_tensor_transformed[i, :, :].transpose()
-                c_slices.append(c_slice)
-        elif direction == 4: # flip cols; loop over diags
-            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=1)
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for offset in range(-(num_of_rows - 1), num_of_cols):
-                c_slice = np.diagonal(ssdd_tensor, offset=offset)
-                c_slices.append(c_slice)
-        elif direction == 5: # flip cols; transpose; loop over rows
-            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=1)
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for i in range(num_of_rows):
-                c_slice = ssdd_tensor[i, :, :].transpose()
-                c_slices.append(c_slice)
-        elif direction == 6: # flip cols and flip rows; loop over diags
-            ssdd_tensor_transformed = np.flip(np.flip(ssdd_tensor, axis=1), axis=0)
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for offset in range(-(num_of_rows - 1), num_of_cols):
-                c_slice = np.diagonal(ssdd_tensor, offset=offset)
-                c_slices.append(c_slice)
-        elif direction == 7: # transpose and flip rows; loop over rows
             ssdd_tensor_transformed = np.flip(np.transpose(ssdd_tensor, axes=[1, 0, 2]), axis=0)
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for i in range(num_of_rows):
-                c_slice = ssdd_tensor_transformed[i, :, :].transpose()
-                c_slices.append(c_slice)
-        elif direction == 8: # flip rows; loop over diags
-            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=0)
-            num_of_rows, num_of_cols = ssdd_tensor_transformed.shape[0], ssdd_tensor_transformed.shape[1]
-            for offset in range(-(num_of_rows - 1), num_of_cols):
-                c_slice = np.diagonal(ssdd_tensor, offset=offset)
-                c_slices.append(c_slice)
+            return self.dp_get_direction_slices(ssdd_tensor_transformed, direction=1)
+        elif direction == 4: # flip cols; loop over diags
+            ssdd_tensor_transformed = np.flip(np.transpose(ssdd_tensor, axes=[1, 0, 2]), axis=0)
+            return self.dp_get_direction_slices(ssdd_tensor_transformed, direction=2)
+        if direction > 4:
+            ssdd_tensor_transformed = np.flip(ssdd_tensor, axis=[0, 1])
+            return self.dp_get_direction_slices(ssdd_tensor_transformed, direction=direction-4)
 
-        return c_slices
+
+    def build_matrix_from_slices(self, slices, direction, num_of_rows, num_of_cols):
+        """Build a matrix from slices.
+        The first slice should be of size 1,
+        The second slice should be of size 3,
+        until some constant, and than it starts to reduce up to 1.
+        """
+        if direction == 1:
+            return np.stack(slices, axis=0)
+        elif direction == 2:
+            m = np.zeros((num_of_rows, num_of_cols, slices[0].shape[1]))
+            for slice_idx, slice_inst in enumerate(slices):
+                row_offset = max(0, slice_idx + 1 - num_of_cols)
+                for diag_idx, val in enumerate(slice_inst):
+                    m[diag_idx + row_offset, num_of_cols + row_offset - slice_idx + diag_idx - 1, :] = val
+            return m
+        elif direction == 3:
+            return np.flip(np.stack(slices, axis=1), axis=1)
+        elif direction == 4:
+            m_transposed = self.build_matrix_from_slices(slices, direction=2, num_of_rows=num_of_cols, num_of_cols=num_of_rows)
+            return np.flip(np.transpose(m_transposed, axes=[1, 0, 2]), axis=1)
+        elif direction > 4:
+            m_transposed = self.build_matrix_from_slices(slices, direction=direction - 4, num_of_rows=num_of_rows, num_of_cols=num_of_cols)
+            return np.flip(m_transposed, axis=[0,1])
+
+
+    def build_l_for_direction(self, ssdd_tensor, direction, p1, p2):
+        direction_slices = self.dp_get_direction_slices(ssdd_tensor, direction)
+        l_direction_slices = []
+        for slice_inst in direction_slices:
+            l_direction_slices.append(self.dp_grade_slice(slice_inst, p1, p2).transpose())
+        l_direction = self.build_matrix_from_slices(l_direction_slices, direction, ssdd_tensor.shape[0],
+                                                    ssdd_tensor.shape[1])
+        return l_direction
+
 
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
@@ -243,10 +260,14 @@ class Solution:
             that direction.
         """
         num_of_directions = 8
-        l = np.zeros_like(ssdd_tensor)
-        direction_to_slice = {}
-        """INSERT YOUR CODE HERE"""
-        return direction_to_slice
+        direction_to_slice = range(1, 1 + num_of_directions)
+        dic_of_imgs = {}
+
+        for direction in direction_to_slice:
+            l_direction = self.build_l_for_direction(ssdd_tensor, direction, p1, p2)
+            dic_of_imgs[direction] = self.naive_labeling(l_direction)
+
+        return dic_of_imgs
 
     def sgm_labeling(self, ssdd_tensor: np.ndarray, p1: float, p2: float):
         """Estimate the depth map according to the SGM algorithm.
@@ -272,5 +293,83 @@ class Solution:
         """
         num_of_directions = 8
         l = np.zeros_like(ssdd_tensor)
-        """INSERT YOUR CODE HERE"""
+
+        for direction in range(1, num_of_directions+1):
+            l += self.build_l_for_direction(ssdd_tensor, direction, p1, p2)
+        l = l / 8
+
         return self.naive_labeling(l)
+
+    @staticmethod
+    def ncc_distance(left_image: np.ndarray,
+                     right_image: np.ndarray,
+                     win_size: int,
+                     dsp_range: int) -> np.ndarray:
+        """Compute the NCC - normalized cross correlation distances tensor.
+
+        Args:
+            left_image: Left image of shape: HxWx3, and type np.double64.
+            right_image: Right image of shape: HxWx3, and type np.double64.
+            win_size: Window size odd integer.
+            dsp_range: Half of the disparity range. The actual range is
+            -dsp_range, -dsp_range + 1, ..., 0, 1, ..., dsp_range.
+
+        Returns:
+            A tensor of the sum of squared differences for every pixel in a
+            window of size win_size X win_size, for the 2*dsp_range + 1
+            possible disparity values. The tensor shape should be:
+            HxWx(2*dsp_range+1).
+        """
+        num_of_rows, num_of_cols = left_image.shape[0], left_image.shape[1]
+        disparity_values = range(-dsp_range, dsp_range + 1)
+        ncc_tensor = np.zeros((num_of_rows,
+                                num_of_cols,
+                                len(disparity_values)))
+
+        if win_size < 0 or win_size % 2 == 0:
+            raise TypeError('window size must be odd integer')
+
+        padding_size_left = int((win_size - 1) / 2)
+        # Another padding is needed for the horizontal dimension of the second image
+        # An example: given we want to calculate the ssd for pixel (0x0), with a windows size of 3,
+        # and a depth of -1. We may choose to define such a case with an ssd value of 0 because it is outside
+        # the column boundary of the second image. However, a better solution is to compare only the third column of
+        # the windows which is in the boundaries of the second image.
+        padding_size_right = int((win_size - 1))
+        if len(left_image.shape) > 2:  # handle image 3d case
+            padded_left_image = np.pad(left_image, (
+            (padding_size_left, padding_size_left), (padding_size_left, padding_size_left), (0, 0)))
+            padded_right_image = np.pad(right_image, (
+            (padding_size_left, padding_size_left), (padding_size_right, padding_size_right), (0, 0)))
+        else:  # handle image 2d case
+            padded_left_image = np.pad(left_image,
+                                       ((padding_size_left, padding_size_left), (padding_size_left, padding_size_left)))
+            padded_right_image = np.pad(right_image, (
+            (padding_size_left, padding_size_left), (padding_size_right, padding_size_right)))
+
+        for i in range(num_of_rows):
+            for j in range(num_of_cols):
+                left_window = padded_left_image[i:i + win_size, j:j + win_size]
+                left_window_mean = [np.mean(left_window[:,:,i]) for i in range(left_window.shape[2])]
+                left_window_std = [np.std(left_window[:,:,i]) for i in range(left_window.shape[2])]
+
+                for d_idx, d in enumerate(disparity_values):
+                    j_right = j + d + (padding_size_right - padding_size_left)
+                    if 0 <= j_right <= (num_of_cols + 2 * padding_size_right - win_size):
+                        right_window = padded_right_image[i:i + win_size, j_right:j_right + win_size]
+                        right_window_mean = [np.mean(right_window[:,:,i]) for i in range(right_window.shape[2])]
+                        right_window_std = [np.std(right_window[:,:,i]) for i in range(right_window.shape[2])]
+                        a1 = -(left_window - left_window_mean)
+                        a2 = (right_window - right_window_mean)
+                        a = [( np.sum(a1[:,:,i] * a2[:,:,i]) / (max(left_window_std[i] * right_window_std[i], 0.00000000000000001))) for i in range(right_window.shape[2])]
+                        ncc_tensor[i, j, d_idx] = np.mean(a)
+                    else:
+                        ncc_tensor[i, j, d_idx] = 0
+
+        if ncc_tensor.max() == ncc_tensor.min():
+            raise ValueError('ssd tensor is all identical. Cannot normalize')
+        ncc_tensor -= ncc_tensor.min()
+        ncc_tensor /= ncc_tensor.max()
+        ncc_tensor *= 255.0
+        return ncc_tensor
+
