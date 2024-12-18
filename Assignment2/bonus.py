@@ -63,13 +63,13 @@ def alpha_expansion(ssdd_tensor, labeling, alpha):
             else:
                 graph.add_edge(pixel, sink, capacity=0)
 
-            # Add pairwise edges
+            # Add binary term edges
             if i + 1 < num_rows:  # Vertical neighbor
                 neighbor = (i + 1, j)
-                add_pairwise_edges(graph, pixel, neighbor)
+                add_binaryterm_edges(graph, pixel, neighbor)
             if j + 1 < num_cols:  # Horizontal neighbor
                 neighbor = (i, j + 1)
-                add_pairwise_edges(graph, pixel, neighbor)
+                add_binaryterm_edges(graph, pixel, neighbor)
 
     # Solve max-flow/min-cut
     flow_value, partition = nx.minimum_cut(graph, source, sink)
@@ -84,8 +84,8 @@ def alpha_expansion(ssdd_tensor, labeling, alpha):
 
     return labeling
 
-def add_pairwise_edges(graph, pixel1, pixel2):
-    """Add pairwise edges to the graph based on smoothness cost."""
+def add_binaryterm_edges(graph, pixel1, pixel2):
+    """Add binary term edges to the graph based on smoothness cost."""
     cost=0.99999
     graph.add_edge(pixel1, pixel2, capacity=(1-cost))
     graph.add_edge(pixel2, pixel1, capacity=(1-cost))
