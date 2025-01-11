@@ -25,11 +25,27 @@ class FacesDataset(Dataset):
 
     def __getitem__(self, index) -> tuple[torch.Tensor, int]:
         """Get a sample and label from the dataset."""
-        """INSERT YOUR CODE HERE, overrun return."""
+        # real image case
+        if 0 <= index < len(self.real_image_names):
+            label = 0
+            image_name = self.real_image_names[index]
+            image_path = os.path.join(os.path.join(self.root_path, 'real'), image_name)
+        # fake/synthetic image case
+        elif index < self.__len__():
+            label = 1
+            index -= len(self.real_image_names)
+            image_name = self.fake_image_names[index]
+            image_path = os.path.join(os.path.join(self.root_path, 'fake'), image_name)
+        else:
+            raise ValueError(f'wrong index {index}')
 
-        return torch.rand((3, 256, 256)), int(torch.randint(0, 2, size=(1, )))
+        image = Image.open(image_path)
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
 
     def __len__(self):
         """Return the number of images in the dataset."""
-        """INSERT YOUR CODE HERE, overrun return."""
-        return 100
+        return len(self.real_image_names) + len(self.fake_image_names)
