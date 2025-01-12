@@ -57,8 +57,30 @@ def get_soft_scores_and_true_labels(dataset, model):
         inference result on the images in the dataset (data in index = 1).
         gt_labels: an iterable holding the samples' ground truth labels.
     """
-    """INSERT YOUR CODE HERE, overrun return."""
-    return torch.rand(100, ), torch.rand(100, ), torch.randint(0, 2, (100, ))
+    model.eval()  # Set model to evaluation mode
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+
+    all_first_soft_scores = []
+    all_second_soft_scores = []
+    gt_labels = []
+
+    with torch.no_grad():  # Disable gradient calculations for evaluation
+        for inputs, targets in dataloader:
+            inputs, targets = inputs.to(device), targets.to(device)
+
+            # Get model outputs
+            pred = model(inputs)
+
+            # Extract soft scores for both classes
+            first_soft_scores = pred[:, 0].tolist()
+            second_soft_scores = pred[:, 1].tolist()
+
+            # Append results
+            all_first_soft_scores.extend(first_soft_scores)
+            all_second_soft_scores.extend(second_soft_scores)
+            gt_labels.extend(targets.tolist())
+
+    return all_first_soft_scores, all_second_soft_scores, gt_labels
 
 
 def plot_roc_curve(roc_curve_figure,
