@@ -4,6 +4,7 @@ import os
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+import torchvision.transforms as transforms
 
 
 class FacesDataset(Dataset):
@@ -43,6 +44,9 @@ class FacesDataset(Dataset):
 
         if self.transform:
             image = self.transform(image)
+        else:
+            converter = transforms.PILToTensor()
+            image = converter(image)
 
         return image, label
 
