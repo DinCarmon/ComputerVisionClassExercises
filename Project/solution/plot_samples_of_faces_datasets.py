@@ -18,9 +18,8 @@ def main():
     # create deepfakes dataset
     fakes_dataset_train = load_dataset('fakes_dataset', 'train')
     # sample indices of real and fake images
-    real_image_idx = random.choice(range(int(len(fakes_dataset_train) / 2)))
-    fake_image_idx = random.choice(range(int(len(fakes_dataset_train) / 2),
-                                         len(fakes_dataset_train)))
+    real_image_idx = random.choice(range(7200))
+    fake_image_idx = random.choice(range(7200, len(fakes_dataset_train)))
     images_samples = plt.figure()
     plt.subplot(2, 2, 1)
     plt.imshow(normalize(
@@ -34,9 +33,8 @@ def main():
     # create synthetic faces dataset
     synthetic_dataset_train = load_dataset('synthetic_dataset', 'train')
 
-    real_image_idx = random.choice(range(int(len(synthetic_dataset_train) / 2)))
-    fake_image_idx = random.choice(range(int(len(synthetic_dataset_train) / 2),
-                                         len(synthetic_dataset_train)))
+    real_image_idx = random.choice(range(4725))
+    fake_image_idx = random.choice(range(4725, len(synthetic_dataset_train)))
     plt.subplot(2, 2, 3)
     plt.imshow(normalize(
         synthetic_dataset_train[real_image_idx][0]).permute(1, 2, 0))
