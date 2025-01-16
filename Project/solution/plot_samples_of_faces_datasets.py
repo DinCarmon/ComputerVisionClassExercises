@@ -46,6 +46,7 @@ def main():
     images_samples.set_size_inches((8, 8))
     images_samples.savefig(os.path.join(FIGURES_DIR, 'datasets_samples.png'))
 
+    plt.show()
 
 if __name__ == "__main__":
     main()

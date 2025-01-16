@@ -38,11 +38,12 @@ class FacesDataset(Dataset):
             image_name = self.fake_image_names[index]
             image_path = os.path.join(os.path.join(self.root_path, 'fake'), image_name)
         else:
-            raise ValueError(f'wrong index {index}')
+            raise ValueError(f'Index: {index} is out of bounds. '
+                             f'The data set size is {self.__len__()}.')
 
         image = Image.open(image_path)
 
-        if self.transform:
+        if self.transform is not None:
             image = self.transform(image)
         else:
             converter = transforms.PILToTensor()
