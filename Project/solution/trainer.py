@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 
 import torch
+from numpy.f2py.symbolic import number_types
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
@@ -47,44 +48,61 @@ class Trainer:
             (avg_loss, accuracy): tuple containing the average loss and
             accuracy across all dataset samples.
         """
+        # Set the model to training mode
+        # This is essential because certain layers and behaviors in a torch NN behave differently
+        # during training and evaluation
         self.model.train()
+
         total_loss = 0
         avg_loss = 0
         accuracy = 0
-        nof_samples = 0
+        nof_samples = 0     # number of samples
         correct_labeled_samples = 0
 
         train_dataloader = DataLoader(self.train_dataset,
-                                      self.batch_size,
-                                      shuffle=True)
+                                      self.batch_size,          # How many samples per batch to load
+                                      shuffle=True)             # Allow the data to reshuffle at every sampling
         print_every = int(len(train_dataloader) / 10)
 
         for batch_idx, (inputs, targets) in enumerate(train_dataloader):
+            # inputs: A tensor of size batch size,
+            #           where each sample is of the input dimension (For images for example: of size 3 X Width X Height)
+            # targets: A tensor of size batch size - of the classification for each of the samples.
+            inputs : torch.Tensor
+            targets : torch.Tensor
+
+            # Move the data to the device
             inputs, targets = inputs.to(device), targets.to(device)
 
-            # Zero the gradients
+            # Zero the gradients - i.e reset the gradients of all parameters in the optimizer to zero.
+            # This is a critical step in the training process because gradients accumulate by default in PyTorch,
+            # which can lead to incorrect updates if not cleared properly.
             self.optimizer.zero_grad()
 
             # Forward pass
-            pred = self.model(inputs)
+            current_predictions : torch.Tensor = self.model(inputs)
 
             # Compute the loss
-            loss = self.criterion(pred, targets)
+            loss : torch.Tensor = self.criterion(current_predictions, targets)
 
-            # Backward pass
+            # Backward pass.
+            # In the background using the given loss function, and activation function, the gradients functions are
+            # calculated. Those along with the forward pass values give all the inputs needed to run the backward
+            # algorithm and compute all gradients.
             loss.backward()
 
-            # Optimizer step
+            # Optimizer step.
+            # Un the background all the weights of the NN are updated according to the calculated gradients.
             self.optimizer.step()
 
             # Update total loss and accuracy metrics
             total_loss += loss.item()
             nof_samples += targets.size(0)
-            correct_labeled_samples += (pred.argmax(dim=1) == targets).sum().item()
+            correct_labeled_samples += (current_predictions.argmax(dim=1) == targets).sum().item()
 
             # Calculate average loss and accuracy
-            avg_loss = total_loss / (batch_idx + 1)
-            accuracy = 100.0 * correct_labeled_samples / nof_samples
+            avg_loss : float = total_loss / (batch_idx + 1)
+            accuracy : float = 100.0 * correct_labeled_samples / nof_samples
 
             if batch_idx % print_every == 0 or \
                     batch_idx == len(train_dataloader) - 1:
@@ -105,7 +123,11 @@ class Trainer:
             (avg_loss, accuracy): tuple containing the average loss and
             accuracy across all dataset samples.
         """
+        # Set the model to evaluation mode
+        # This is essential because certain layers and behaviors in a torch NN behave differently
+        # during training and evaluation
         self.model.eval()
+
         dataloader = DataLoader(dataset,
                                 batch_size=self.batch_size,
                                 shuffle=False)
@@ -117,15 +139,21 @@ class Trainer:
         print_every = max(int(len(dataloader) / 10), 1)
 
         for batch_idx, (inputs, targets) in enumerate(dataloader):
+            # inputs: A tensor of size batch size,
+            #           where each sample is of the input dimension (For images for example: of size 3 X Width X Height)
+            # targets: A tensor of size batch size - of the classification for each of the samples.
+            inputs: torch.Tensor
+            targets: torch.Tensor
+
             inputs, targets = inputs.to(device), targets.to(device)
 
             # Disable gradient computation
             with torch.no_grad():
                 # Forward pass
-                pred = self.model(inputs)
+                pred : torch.Tensor = self.model(inputs)
 
                 # Compute the loss
-                loss = self.criterion(pred, targets)
+                loss : torch.Tensor = self.criterion(pred, targets)
 
             # Update total loss and accuracy metrics
             total_loss += loss.item()
@@ -133,8 +161,8 @@ class Trainer:
             correct_labeled_samples += (pred.argmax(dim=1) == targets).sum().item()
 
             # Calculate average loss and accuracy
-            avg_loss = total_loss / (batch_idx + 1)
-            accuracy = 100.0 * correct_labeled_samples / nof_samples
+            avg_loss : float = total_loss / (batch_idx + 1)
+            accuracy : float = 100.0 * correct_labeled_samples / nof_samples
 
             if batch_idx % print_every == 0 or batch_idx == len(dataloader) - 1:
                 print(f'Epoch [{self.epoch:03d}] | Loss: {avg_loss:.3f} | '
@@ -218,6 +246,8 @@ class Trainer:
             output_data["test_acc"].append(test_acc)
 
             # Save checkpoint
+            # For each epoch where the evaluation dataset accuracy is improved,
+            # We wish to save a state too the checkpoint file
             if val_acc > best_acc:
                 print(f'Saving checkpoint {checkpoint_filename}')
                 state = {
