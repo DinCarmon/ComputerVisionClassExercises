@@ -15,10 +15,11 @@ import torch.utils.model_zoo as model_zoo
 from torch.nn import init
 import torch
 
-__all__ = ['xception']
+__all__ = ['Xception', 'build_xception_backbone', 'disable_ssl_verification']
 
 model_urls = {
-    'xception': 'https://www.dropbox.com/s/1hplpzet9d7dv29/xception-c0a72b38.pth.tar?dl=1'
+    # 'xception': 'https://www.dropbox.com/s/1hplpzet9d7dv29/xception-c0a72b38.pth.tar?dl=1'
+    'xception':'http://data.lip6.fr/cadene/pretrainedmodels/xception-43020ad28.pth'
 }
 
 
@@ -203,6 +204,11 @@ class Xception(nn.Module):
 
         return x
 
+def disable_ssl_verification():
+    import os
+    os.environ['SSL_CERT_FILE'] = '/path/to/certifi/cacert.pem'
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
 
 def build_xception_backbone(pretrained=False, **kwargs):
     """

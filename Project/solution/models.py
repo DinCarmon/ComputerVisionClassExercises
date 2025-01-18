@@ -4,7 +4,8 @@ import torch.nn.functional as F
 
 from torch import nn
 
-from xcpetion import build_xception_backbone
+from solution.xcpetion import disable_ssl_verification
+from xcpetion import build_xception_backbone, Xception, disable_ssl_verification
 
 
 class SimpleNet(nn.Module):
@@ -33,6 +34,26 @@ class SimpleNet(nn.Module):
         two_way_output = self.fc3(fully_connected_second_out)
         return two_way_output
 
+class XceptionNewHead(nn.Module):
+    def __init__(self):
+        super(XceptionNewHead, self).__init__()
+        self.fc1 = nn.Linear(2048, 1000)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.fc2 = nn.Linear(1000, 256)
+        self.relu2 = nn.ReLU(inplace=True)
+        self.fc3 = nn.Linear(256, 64)
+        self.relu3 = nn.ReLU(inplace=True)
+        self.fc4 = nn.Linear(64, 2)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu1(x)
+        x = self.fc2(x)
+        x = self.relu2(x)
+        x = self.fc3(x)
+        x = self.relu3(x)
+        x = self.fc4(x)
+        return x
 
 def get_xception_based_model() -> nn.Module:
     """Return an Xception-Based network.
@@ -41,5 +62,11 @@ def get_xception_based_model() -> nn.Module:
     (2) Override `custom_network`'s fc attribute with the binary
     classification head stated in the exercise.
     """
-    """INSERT YOUR CODE HERE, overrun return."""
-    return SimpleNet()
+
+    # uncomment only if the weights are not already in pytorch cache and the ssl certificate causes problems
+    # disable_ssl_verification()
+
+    xception_model_trained : Xception = build_xception_backbone(pretrained=True)
+
+    xception_model_trained.fc = XceptionNewHead()
+    return xception_model_trained
