@@ -64,11 +64,14 @@ def get_grad_cam_visualization(test_dataset: torch.utils.data.Dataset,
     model.eval()
 
     # Compute a Grad-CAM for the image for the target layer model.conv3
-    target_layer = model.conv3[-1]
+    target_layer = model.conv3
 
     with GradCAM(model=model, target_layers=[target_layer]) as cam:
         # You can also pass aug_smooth=True and eigen_smooth=True, to apply smoothing.
-        grayscale_cam = cam(input_tensor=sample, targets=[model(sample)])
+
+
+        grayscale_cam = cam(input_tensor=sample)
+
         # In this example grayscale_cam has only one image in the batch:
         grayscale_cam = grayscale_cam[0, :]
         visualization = show_cam_on_image(sample, grayscale_cam, use_rgb=True)
