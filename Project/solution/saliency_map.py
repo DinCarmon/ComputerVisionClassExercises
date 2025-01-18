@@ -65,13 +65,17 @@ def compute_gradient_saliency_maps(samples: torch.tensor,
     samples.requires_grad_()  # Enable gradient computation for the input samples
 
     # (2) Compute a forward pass for the samples in the model
-    pred : torch.Tensor = model(samples)
+    predictions = model(samples)
 
     # (3) Gather only the scores corresponding to the true labels
-    target_scores = pred.gather(1, true_labels.view(-1, 1)).squeeze()
+    target_scores = predictions.gather(1, true_labels.view(-1, 1)).squeeze()
 
     # (4) Compute a backward pass on these scores
     target_scores.backward(torch.ones_like(target_scores))
+    # Why torch.ones_like was used?
+    #   If target_scores is not a scalar (e.g., a batch of scores for multiple samples, shape [B]),
+    #   PyTorch needs to know the gradient of the output with respect to itself.
+    #   This is supplied as an argument to .backward().
 
     # (5) Collect the gradients from the samples object
     gradients = samples.grad
