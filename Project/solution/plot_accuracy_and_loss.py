@@ -71,6 +71,8 @@ def main():
         os.path.join(FIGURES_DIR,
                      f'{args.dataset}_{args.model}_accuracies_plot.png'))
 
+    #plt.show()
+
 
 if __name__ == '__main__':
     main()

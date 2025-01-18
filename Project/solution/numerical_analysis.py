@@ -58,22 +58,33 @@ def get_soft_scores_and_true_labels(dataset, model):
         gt_labels: an iterable holding the samples' ground truth labels.
     """
     model.eval()  # Set model to evaluation mode
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
 
-    all_first_soft_scores = []
-    all_second_soft_scores = []
-    gt_labels = []
+    batch_size = 32 # Arbitrary size to get batches of samples
+
+    dataloader : torch.utils.data.dataloader.DataLoader = DataLoader(dataset,
+                                                                     batch_size=batch_size,
+                                                                     shuffle=False)
+
+    all_first_soft_scores : list = []
+    all_second_soft_scores : list = []
+    gt_labels : list = []
 
     with torch.no_grad():  # Disable gradient calculations for evaluation
         for inputs, targets in dataloader:
+            # inputs: A tensor of size batch size,
+            #           where each sample is of the input dimension (For images for example: of size 3 X Width X Height)
+            # targets: A tensor of size batch size - of the classification for each of the samples.
+            inputs: torch.Tensor
+            targets: torch.Tensor
+
             inputs, targets = inputs.to(device), targets.to(device)
 
             # Get model outputs
-            pred = model(inputs)
+            pred : torch.Tensor = model(inputs)
 
             # Extract soft scores for both classes
-            first_soft_scores = pred[:, 0].tolist()
-            second_soft_scores = pred[:, 1].tolist()
+            first_soft_scores : list = pred[:, 0].tolist()
+            second_soft_scores : list = pred[:, 1].tolist()
 
             # Append results
             all_first_soft_scores.extend(first_soft_scores)

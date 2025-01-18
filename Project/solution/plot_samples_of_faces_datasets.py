@@ -4,6 +4,7 @@ import random
 import matplotlib.pyplot as plt
 
 from common import FIGURES_DIR
+from solution.faces_dataset import FacesDataset
 from utils import load_dataset
 
 
@@ -16,10 +17,10 @@ def main():
     """Load the Deepfakes and Synthetic Faces datasets, sample real and fake
     images from them and plot them in a single image."""
     # create deepfakes dataset
-    fakes_dataset_train = load_dataset('fakes_dataset', 'train')
+    fakes_dataset_train : FacesDataset = load_dataset('fakes_dataset', 'train')
     # sample indices of real and fake images
-    real_image_idx = random.choice(range(7200))
-    fake_image_idx = random.choice(range(7200, len(fakes_dataset_train)))
+    real_image_idx = random.choice(range(len(fakes_dataset_train.real_image_names)))
+    fake_image_idx = random.choice(range(len(fakes_dataset_train.real_image_names), len(fakes_dataset_train)))
     images_samples = plt.figure()
     plt.subplot(2, 2, 1)
     plt.imshow(normalize(
@@ -31,10 +32,10 @@ def main():
     plt.title('Deepfakes dataset fake image')
 
     # create synthetic faces dataset
-    synthetic_dataset_train = load_dataset('synthetic_dataset', 'train')
+    synthetic_dataset_train : FacesDataset = load_dataset('synthetic_dataset', 'train')
 
-    real_image_idx = random.choice(range(4725))
-    fake_image_idx = random.choice(range(4725, len(synthetic_dataset_train)))
+    real_image_idx = random.choice(range(len(synthetic_dataset_train.real_image_names)))
+    fake_image_idx = random.choice(range(len(synthetic_dataset_train.real_image_names), len(synthetic_dataset_train)))
     plt.subplot(2, 2, 3)
     plt.imshow(normalize(
         synthetic_dataset_train[real_image_idx][0]).permute(1, 2, 0))
