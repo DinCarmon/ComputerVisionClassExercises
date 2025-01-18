@@ -8,7 +8,6 @@ from torchvision import transforms
 from faces_dataset import FacesDataset
 from models import SimpleNet, get_xception_based_model
 
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 TRANSFORM_TRAIN = transforms.Compose([
     transforms.RandomCrop(256, padding=4),
