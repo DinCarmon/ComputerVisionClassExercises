@@ -14,7 +14,6 @@ from utils import load_dataset, load_model
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -74,10 +73,19 @@ def get_grad_cam_visualization(test_dataset: torch.utils.data.Dataset,
 
         # In this example grayscale_cam has only one image in the batch:
         grayscale_cam = grayscale_cam[0, :]
+
+        # If the tensor is normalized, denormalize it to [0, 1]
+        if sample.min() < 0 or sample.max() > 1:
+            sample = (sample - sample.min()) / (sample.max() - sample.min())
+
+        # The image is of dimension 3 X 256 X 256, while the grayscale_cam is of dimensions 256X256X3. Adjust it.
+        # In addition, go from a tensor to an ndarrya
+        sample = sample[0, :].permute(1, 2, 0).numpy()
+
         visualization = show_cam_on_image(sample, grayscale_cam, use_rgb=True)
 
     # Return the visualization and the true label
-    return grayscale_cam, true_label
+    return visualization, true_label
 
 def main():
     """Create two GradCAM images, one of a real image and one for a fake
