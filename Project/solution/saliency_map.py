@@ -61,8 +61,28 @@ def compute_gradient_saliency_maps(samples: torch.tensor,
         saliency: vanilla gradient saliency maps. This should be a tensor of
         shape Bx256x256 where B is the number of images in samples.
     """
-    """INSERT YOUR CODE HERE, overrun return."""
-    return torch.rand(6, 256, 256)
+    # (1) Set requires_grad_ for the samples
+    samples.requires_grad_()  # Enable gradient computation for the input samples
+
+    # (2) Compute a forward pass for the samples in the model
+    pred : torch.Tensor = model(samples)
+
+    # (3) Gather only the scores corresponding to the true labels
+    target_scores = pred.gather(1, true_labels.view(-1, 1)).squeeze()
+
+    # (4) Compute a backward pass on these scores
+    target_scores.backward(torch.ones_like(target_scores))
+
+    # (5) Collect the gradients from the samples object
+    gradients = samples.grad
+
+    # (6) Compute the absolute value (L1 norm) of these values
+    abs_gradients = gradients.abs()
+
+    # (7) Pick the maximum value from channels on each pixel
+    saliency = abs_gradients.max(dim=1).values  # Take max across the channel dimension
+
+    return saliency  # Return saliency maps
 
 
 def main():  # pylint: disable=R0914, R0915

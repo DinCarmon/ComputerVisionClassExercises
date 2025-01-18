@@ -11,6 +11,9 @@ from torch.utils.data import DataLoader
 from common import FIGURES_DIR
 from utils import load_dataset, load_model
 
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -51,9 +54,27 @@ def get_grad_cam_visualization(test_dataset: torch.utils.data.Dataset,
         the true label of that sample (since it is an output of a DataLoader
         of batch size 1, it's a tensor of shape (1,)).
     """
-    """INSERT YOUR CODE HERE, overrun return."""
-    return np.random.rand(256, 256, 3), torch.randint(0, 2, (1,))
+    # Sample a single image from the dataset
+    dataloader : torch.utils.data.dataloader.DataLoader = DataLoader(test_dataset,
+                                                                     batch_size=1,
+                                                                     shuffle=True)
+    sample, true_label = next(iter(dataloader))
 
+    # Ensure the model is in evaluation mode
+    model.eval()
+
+    # Compute a Grad-CAM for the image for the target layer model.conv3
+    target_layer = model.conv3[-1]
+
+    with GradCAM(model=model, target_layers=[target_layer]) as cam:
+        # You can also pass aug_smooth=True and eigen_smooth=True, to apply smoothing.
+        grayscale_cam = cam(input_tensor=sample, targets=[model(sample)])
+        # In this example grayscale_cam has only one image in the batch:
+        grayscale_cam = grayscale_cam[0, :]
+        visualization = show_cam_on_image(sample, grayscale_cam, use_rgb=True)
+
+    # Return the visualization and the true label
+    return grayscale_cam, true_label
 
 def main():
     """Create two GradCAM images, one of a real image and one for a fake
