@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 from torch import nn
 
-from solution.xcpetion import disable_ssl_verification
 from xcpetion import build_xception_backbone, Xception, disable_ssl_verification
 
 

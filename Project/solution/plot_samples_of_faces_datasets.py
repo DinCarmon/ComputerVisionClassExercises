@@ -4,7 +4,7 @@ import random
 import matplotlib.pyplot as plt
 
 from common import FIGURES_DIR
-from solution.faces_dataset import FacesDataset
+from faces_dataset import FacesDataset
 from utils import load_dataset
 
 
