@@ -4,7 +4,6 @@ import json
 from dataclasses import dataclass
 
 import torch
-from numpy.f2py.symbolic import number_types
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
