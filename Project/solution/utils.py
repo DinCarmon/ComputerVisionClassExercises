@@ -24,7 +24,8 @@ TRANSFORM_TEST = transforms.Compose([
 ])
 
 
-def load_dataset(dataset_name: str, dataset_part: str) -> FacesDataset:
+def load_dataset(dataset_name: str, dataset_part: str) -> \
+        torch.utils.data.Dataset:
     """Loads dataset part from dataset name.
 
     For example, loading the trining set of the Deepfakes dataset:
